@@ -32,6 +32,9 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.webkit.WebSettingsCompat;
+import androidx.webkit.WebViewFeature;
+
 /**
  * Improve SST Online - Android.
  * Portal PHP/MySQL mantido na hospedagem. Nenhum dado é copiado para dentro do APK.
@@ -142,6 +145,12 @@ public class MainActivity extends Activity {
         settings.setTextZoom(100);
         settings.setCacheMode(WebSettings.LOAD_NO_CACHE); // Protege páginas privadas contra cache local.
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+        // WebAuthn / passkeys: segurança nativa, sem expor dados biométricos ao app.
+        // Requer Digital Asset Links no domínio e WebView compatível.
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_AUTHENTICATION)) {
+            WebSettingsCompat.setWebAuthenticationSupport(
+                settings, WebSettingsCompat.WEB_AUTHENTICATION_SUPPORT_FOR_APP);
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) settings.setSafeBrowsingEnabled(true);
         CookieManager.getInstance().setAcceptCookie(true);
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, false);
@@ -225,6 +234,12 @@ public class MainActivity extends Activity {
     private boolean routeUrl(Uri uri) {
         if (uri == null) return true;
         String scheme = uri.getScheme();
+        // A confirmação pessoal sempre abre o navegador padrão: passkeys funcionam
+        // mesmo em Android sem suporte WebAuthn na WebView ou sem assetlinks.
+        if (isTrustedHost(uri) && "/epi_receber.php".equals(uri.getPath())) {
+            openExternal(uri);
+            return true;
+        }
         if ("https".equalsIgnoreCase(scheme) && isTrustedHost(uri)) return false;
         if ("https".equalsIgnoreCase(scheme) || "http".equalsIgnoreCase(scheme)
                 || "tel".equalsIgnoreCase(scheme) || "mailto".equalsIgnoreCase(scheme)) {
