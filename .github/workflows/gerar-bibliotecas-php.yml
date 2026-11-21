@@ -1,0 +1,68 @@
+name: Gerar bibliotecas PHP do Improve SST
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/gerar-bibliotecas-php.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  montar-vendor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Instalar PHP e Composer
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mbstring, gd, dom, xml, openssl, sodium, zip, curl
+          tools: composer:v2
+          coverage: none
+
+      - name: Preparar composer.json do Improve SST
+        shell: bash
+        run: |
+          mkdir -p bibliotecas-improve
+          cat > bibliotecas-improve/composer.json <<'JSON'
+          {
+            "name": "improve/sst-nc-email",
+            "description": "Bibliotecas do site Improve SST Online para EPI, PDF e QR Code",
+            "require": {
+              "php": "^8.1",
+              "ext-mbstring": "*",
+              "ext-gd": "*",
+              "ext-dom": "*",
+              "phpmailer/phpmailer": "^6.9",
+              "dompdf/dompdf": "^3.1",
+              "lbuchs/webauthn": "^2.2",
+              "endroid/qr-code": "^5.0"
+            }
+          }
+          JSON
+
+      - name: Baixar dependencias e gerar vendor
+        working-directory: bibliotecas-improve
+        run: composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
+
+      - name: Conferir se as bibliotecas de seguranca estao presentes
+        working-directory: bibliotecas-improve
+        shell: bash
+        run: |
+          test -f vendor/autoload.php
+          php -r 'require "vendor/autoload.php"; if (!class_exists("\\lbuchs\\WebAuthn\\WebAuthn")) { fwrite(STDERR,"ERRO: biblioteca WebAuthn ausente\n"); exit(1); } echo "WebAuthn OK\n";'
+
+      - name: Gerar ZIP com a pasta vendor
+        working-directory: bibliotecas-improve
+        shell: bash
+        run: zip -qr "$GITHUB_WORKSPACE/Improve-SST-vendor.zip" vendor
+
+      - name: Disponibilizar pasta vendor para download
+        uses: actions/upload-artifact@v4
+        with:
+          name: Improve-SST-Bibliotecas-PHP
+          path: Improve-SST-vendor.zip
+          if-no-files-found: error
+          retention-days: 7
