@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Improve SST Online</string>
+    <string name="error_title">Sem conexão com o Improve SST</string>
+    <string name="error_message">Confira sua internet ou tente novamente. O aplicativo precisa se conectar ao portal.</string>
+    <string name="retry">Tentar novamente</string>
+</resources>
